@@ -1,7 +1,12 @@
 from __future__ import annotations
 import os
 from contents.content import ContentFactory
-from contents.line import Type, Content, Comment
+from contents.line import (
+    DataWrapper,
+    Content,
+    Comment,
+    CommandWrapper,
+)
 from contents.section import (
     BranchSection,
     ResourceSection,
@@ -20,16 +25,15 @@ class GiIni(Section):
 
     def save(self, file_name: str):
         file = open(file_name, "w")
-        for wrapper in self.get_lines():
-            line = wrapper.line
-            if isinstance(line, Content):
-                print(line.__ini__(), file=file)
-                continue
-            match wrapper.type:
-                case Type.Command:
-                    print(f"run = {self.get_command(line)}", file=file)
-                case Type.Data:
-                    print(f"{line} = {self.get_value(line)}")
+        for content in self.get_lines():
+            if isinstance(content, CommandWrapper):
+                key = content.get_key()
+                print(f"run = {self.get_command(key)}", file=file)
+            elif isinstance(content, DataWrapper):
+                key = content.get_key()
+                print(f"{key} = {self.get_value(key)}", file=file)
+            elif isinstance(content, Content):
+                print(content.__ini__(), file=file)
 
     def add_content(self, content: Content) -> bool:
         assert isinstance(
@@ -58,6 +62,7 @@ class GiLoader:
         self.__current = scope
 
     def __close_scope(self):
+        self.__current = self.__stack.pop()
         pass
 
     def __parse_line(self, line_str: str):

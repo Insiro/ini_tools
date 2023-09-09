@@ -1,19 +1,24 @@
 from abc import ABCMeta, abstractmethod
 import json
 from contents.content import DataContent
-from contents.line import Content, Type, LineWrapper, Comment
+from contents.line import (
+    CommandWrapper,
+    Content,
+    DataWrapper,
+    Comment,
+)
 
 
 class SectionBase(Content, metaclass=ABCMeta):
     def __init__(self, name: str):
-        self.__lines: list[LineWrapper] = []
+        self.__lines: list[Content] = []
         self.__name: str = name
 
     # region getter
     def get_name(self) -> str:
         return self.__name
 
-    def get_lines(self) -> list[LineWrapper]:
+    def get_lines(self) -> list[Content]:
         return self.__lines
 
     # endregion
@@ -22,11 +27,11 @@ class SectionBase(Content, metaclass=ABCMeta):
     def add_content(self, content: Content) -> bool:
         raise NotImplementedError()
 
-    def _add_line(self, line: str | Content, lineType=Type.Line):
-        self.__lines.append(LineWrapper(line, lineType))
+    def _add_line(self, line: str | Content):
+        self.__lines.append(line)
 
     def add_comment(self, comment: str):
-        self._add_line(Comment(comment), Type.Line)
+        self._add_line(Comment(comment))
 
     def __ini__(self) -> str:
         return f"\n[{self.get_name()}]"
@@ -36,7 +41,7 @@ class Section(SectionBase):
     def __init__(self, name: str) -> None:
         super().__init__(name)
         self.__data: dict[str, str] = {}
-        self.__commands: list[str] = []
+        self.__commands: dict[str, str] = {}
 
     # region getter
     def get_value(self, key: str) -> str | None:
@@ -44,27 +49,27 @@ class Section(SectionBase):
             return None
         return self.__data[key]
 
-    def get_commands(self) -> list[str]:
+    def get_commands(self) -> dict[str, str]:
         return self.__commands.copy()
 
     def get_command(self, key: str) -> str:
-        idx = key.split("_")[-1]
-        return self.__commands[int(idx)]
+        return self.__commands[key]
 
     # endregion
 
     def __ini__(self) -> str:
-        content = [super().__ini__()]
-        for lineWrapper in self.get_lines():
-            line = lineWrapper.line
-            if isinstance(line, Content):
-                content.append(line.__ini__())
-                continue
-            if lineWrapper.type == Type.Data:
-                content.append(f"{line} = {self.get_value(line)}")
-            elif lineWrapper.type == Type.Command:
-                content.append(f"run = {self.get_command(line)}")
-        return "\n".join(content)
+        contents = [super().__ini__()]
+        for content in self.get_lines():
+            if isinstance(content, CommandWrapper):
+                key = content.get_key()
+                contents.append(f"run = {self.get_command(key)}")
+            elif isinstance(content, DataWrapper):
+                key = content.get_key()
+                contents.append(f"{key} = {self.get_value(key)}")
+            elif isinstance(content, Content):
+                contents.append(content.__ini__())
+
+        return "\n".join(contents)
 
     def __dict__(self):
         data = []
@@ -106,11 +111,12 @@ class Section(SectionBase):
 
     def __add_data(self, key: str, value: str):
         self.__data[key] = value
-        self._add_line(key, Type.Data)
+        self._add_line(DataWrapper(key))
 
     def __add_command(self, command: str):
-        self._add_line(f"run_{len(self.__commands)}", Type.Command)
-        self.__commands.append(command)
+        key = f"_run_{len(self.__commands)}"
+        self._add_line(CommandWrapper(key))
+        self.__commands[key] = command
 
 
 class ResourceSection(SectionBase):
@@ -151,17 +157,18 @@ class BranchSection(Section):
         super().__init__(parentName + "_branch")
 
     def __ini__(self) -> str:
-        content = [f"if states"]
-        for lineWrapper in self.get_lines():
-            line = lineWrapper.line
-            if isinstance(line, Content):
-                content.append(line.__ini__())
-                continue
-            if lineWrapper.type == Type.Data:
-                content.append(f"{line} = {self.get_value(line)}")
-            elif lineWrapper.type == Type.Command:
-                content.append(f"run = {self.get_command(line)}")
-        return "\n".join(content) + "\nendif"
+        contents = [f"if states"]
+        for content in self.get_lines():
+            if isinstance(content, DataWrapper):
+                key = content.get_key()
+                contents.append(f"{key} = {self.get_value(key)}")
+            elif isinstance(content, CommandWrapper):
+                key = content.get_key()
+                contents.append(f"run = {self.get_command(key)}")
+            elif isinstance(content, Content):
+                contents.append(content.__ini__())
+
+        return "\n".join(contents) + "\nendif"
 
 
 class SectionFactory:

@@ -1,34 +1,31 @@
-from enum import Enum
+from abc import ABCMeta
 
 
-class Type(Enum):
-    Line = 1
-    Command = 2
-    Data = 3
-
-
-class Content:
+class Content(metaclass=ABCMeta):
     def __str__(self) -> str:
-        return "line"
+        raise NotImplementedError()
 
     def __ini__(self) -> str:
-        return ""
+        raise NotImplementedError()
 
     def __dict__(self):
         return self.__str__()
 
 
-class LineWrapper:
-    def __init__(self, line: str | Content, type: Type) -> None:
-        self.line = line
-        self.type = type
+class KeyWrapper(Content):
+    def __init__(self, key) -> None:
+        self.__key = key
 
-    def __dict__(self):
-        match self.type:
-            case Type.Data:
-                return self.line
-            case _:
-                return self.line.__dict__()
+    def get_key(self):
+        return self.__key
+
+
+class CommandWrapper(KeyWrapper):
+    pass
+
+
+class DataWrapper(KeyWrapper):
+    pass
 
 
 class PlainText(Content):
