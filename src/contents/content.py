@@ -1,7 +1,7 @@
-from contents.line import Line, PlainText
+from contents.line import Content, PlainText
 
 
-class DataContent(Line):
+class DataContent(Content):
     def __init__(self, key: str, value: str) -> None:
         self.__key = key
         self.__value = value
@@ -13,10 +13,9 @@ class DataContent(Line):
         return self.__key
 
 
-class LineFactory:
+class ContentFactory:
     @staticmethod
-    def getContent(line: str) -> Line:
-
+    def getContent(line: str) -> Content:
         assign_idx = line.find("=")
 
         if assign_idx == -1:

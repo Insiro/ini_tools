@@ -7,7 +7,7 @@ class Type(Enum):
     Data = 3
 
 
-class Line:
+class Content:
     def __str__(self) -> str:
         return "line"
 
@@ -19,7 +19,7 @@ class Line:
 
 
 class LineWrapper:
-    def __init__(self, line: str | Line, type: Type) -> None:
+    def __init__(self, line: str | Content, type: Type) -> None:
         self.line = line
         self.type = type
 
@@ -31,7 +31,7 @@ class LineWrapper:
                 return self.line.__dict__()
 
 
-class PlainText(Line):
+class PlainText(Content):
     __txt: str
 
     def __init__(self, txt) -> None:

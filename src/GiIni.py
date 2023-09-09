@@ -1,7 +1,7 @@
 from __future__ import annotations
 import os
-from contents.content import LineFactory
-from contents.line import Type, Line, Comment
+from contents.content import ContentFactory
+from contents.line import Type, Content, Comment
 from contents.section import (
     BranchSection,
     ResourceSection,
@@ -22,7 +22,7 @@ class GiIni(Section):
         file = open(file_name, "w")
         for wrapper in self.get_lines():
             line = wrapper.line
-            if isinstance(line, Line):
+            if isinstance(line, Content):
                 print(line.__ini__(), file=file)
                 continue
             match wrapper.type:
@@ -31,14 +31,14 @@ class GiIni(Section):
                 case Type.Data:
                     print(f"{line} = {self.get_value(line)}")
 
-    def add_content(self, content: Line) -> bool:
+    def add_content(self, content: Content) -> bool:
         assert isinstance(
             content, Comment | Section | ResourceSection
         ), "File Scope only Allow Section and Comment"
         if isinstance(content, Section):
             name = content.get_name()
             self.sections[name] = content
-        super().add_line(content)
+        super()._add_line(content)
         return True
 
     # def add_resource(self, resource: str):
@@ -78,7 +78,7 @@ class GiLoader:
         if item[0] == "[":
             sections = SectionFactory.getSections(item)
             for section in sections:
-                self.__ini.add_line(section)
+                self.__ini.add_content(section)
                 self.__engage_scope(section, True)
             return
         # line handling
@@ -105,7 +105,7 @@ class GiLoader:
                 self.__ini.add_varaible(name)
             return
         # endregion
-        content = LineFactory.getContent(line)
+        content = ContentFactory.getContent(line)
         self.__current.add_content(content)
 
     def load_ini(self, file: str) -> GiIni:

@@ -1,10 +1,10 @@
 from abc import ABCMeta, abstractmethod
 import json
 from contents.content import DataContent
-from contents.line import Line, Type, LineWrapper, Comment
+from contents.line import Content, Type, LineWrapper, Comment
 
 
-class SectionBase(Line, metaclass=ABCMeta):
+class SectionBase(Content, metaclass=ABCMeta):
     def __init__(self, name: str):
         self.__lines: list[LineWrapper] = []
         self.__name: str = name
@@ -19,14 +19,14 @@ class SectionBase(Line, metaclass=ABCMeta):
     # endregion
 
     @abstractmethod
-    def add_content(self, content: Line) -> bool:
+    def add_content(self, content: Content) -> bool:
         raise NotImplementedError()
 
-    def add_line(self, line: str | Line, lineType=Type.Line):
+    def _add_line(self, line: str | Content, lineType=Type.Line):
         self.__lines.append(LineWrapper(line, lineType))
 
     def add_comment(self, comment: str):
-        self.add_line(Comment(comment), Type.Line)
+        self._add_line(Comment(comment), Type.Line)
 
     def __ini__(self) -> str:
         return f"\n[{self.get_name()}]"
@@ -57,7 +57,7 @@ class Section(SectionBase):
         content = [super().__ini__()]
         for lineWrapper in self.get_lines():
             line = lineWrapper.line
-            if isinstance(line, Line):
+            if isinstance(line, Content):
                 content.append(line.__ini__())
                 continue
             if lineWrapper.type == Type.Data:
@@ -72,7 +72,7 @@ class Section(SectionBase):
         isScopeEmpty = True
         for lineWrapper in self.get_lines():
             line = lineWrapper.line
-            if isinstance(line, Line):
+            if isinstance(line, Content):
                 if not isScopeEmpty:
                     isScopeEmpty = True
                     data.append(scope)
@@ -92,9 +92,9 @@ class Section(SectionBase):
     def __str__(self, indent=None):
         return json.dumps(self.__dict__(), indent=indent)
 
-    def add_content(self, content: Line) -> bool:
+    def add_content(self, content: Content) -> bool:
         if not isinstance(content, DataContent):
-            self.add_line(content)
+            self._add_line(content)
             return True
         key = content.get_key()
         match key:
@@ -106,10 +106,10 @@ class Section(SectionBase):
 
     def __add_data(self, key: str, value: str):
         self.__data[key] = value
-        self.add_line(key, Type.Data)
+        self._add_line(key, Type.Data)
 
     def __add_command(self, command: str):
-        self.add_line(f"run_{len(self.__commands)}", Type.Command)
+        self._add_line(f"run_{len(self.__commands)}", Type.Command)
         self.__commands.append(command)
 
 
@@ -154,7 +154,7 @@ class BranchSection(Section):
         content = [f"if states"]
         for lineWrapper in self.get_lines():
             line = lineWrapper.line
-            if isinstance(line, Line):
+            if isinstance(line, Content):
                 content.append(line.__ini__())
                 continue
             if lineWrapper.type == Type.Data:
