@@ -6,6 +6,7 @@ from contents.line import (
     Content,
     DataWrapper,
     Comment,
+    KeyWrapper,
 )
 
 
@@ -35,6 +36,10 @@ class SectionBase(Content, metaclass=ABCMeta):
 
     def __ini__(self) -> str:
         return f"\n[{self.get_name()}]"
+
+    @abstractmethod
+    def __dict__(self):
+        raise NotImplementedError()
 
 
 class Section(SectionBase):
@@ -75,21 +80,24 @@ class Section(SectionBase):
         data = []
         scope = {}
         isScopeEmpty = True
-        for lineWrapper in self.get_lines():
-            line = lineWrapper.line
-            if isinstance(line, Content):
+        for content in self.get_lines():
+            assert isinstance(content, Content), "content is not Allowed Instance"
+            if not isinstance(content, KeyWrapper):
                 if not isScopeEmpty:
                     isScopeEmpty = True
                     data.append(scope)
                     scope = {}
-                data.append(line.__dict__())
+                data.append(content.__dict__())
                 continue
-            # case str
-            value = self.get_value(line)
-            if value is None:
-                value = self.get_command(line)
-            scope[line] = value
             isScopeEmpty = False
+            key = content.get_key()
+            if isinstance(content, CommandWrapper):
+                scope[key] = self.get_command(key)
+            elif isinstance(content, DataWrapper):
+                scope[key] = self.get_value(key)
+            else:
+                raise NotImplementedError()
+
         if not isScopeEmpty:
             data.append(scope)
         return {"__name": f"({self.__class__.__name__}){self.get_name()}", "data": data}
@@ -136,6 +144,16 @@ class ResourceSection(SectionBase):
         if self.__filename is not None:
             content.append(f"filename = {self.__filename}")
         return "\n".join(content)
+
+    def __dict__(self):
+        data = {}
+        if (type := self.__type) is not None:
+            data["type"] = type
+        if (format := self.__format) is not None:
+            data["format"] = format
+        if (filename := self.__filename) is not None:
+            data["filename"] = filename
+        return {"__name": f"(Section){self.get_name()}", "data": data}
 
     def add_content(self, content: DataContent) -> bool:
         key = content.get_key()
