@@ -1,13 +1,9 @@
-from abc import ABCMeta, abstractmethod
 import json
+from abc import ABCMeta, abstractmethod
+
 from contents.content import DataContent
-from contents.line import (
-    CommandWrapper,
-    Content,
-    DataWrapper,
-    Comment,
-    KeyWrapper,
-)
+from contents.line import Comment, Content
+from contents.wrapper import CommandWrapper, DataWrapper, KeyContentWrapper
 
 
 class SectionBase(Content, metaclass=ABCMeta):
@@ -82,7 +78,7 @@ class Section(SectionBase):
         isScopeEmpty = True
         for content in self.get_lines():
             assert isinstance(content, Content), "content is not Allowed Instance"
-            if not isinstance(content, KeyWrapper):
+            if not isinstance(content, KeyContentWrapper):
                 if not isScopeEmpty:
                     isScopeEmpty = True
                     data.append(scope)
@@ -168,43 +164,3 @@ class ResourceSection(SectionBase):
             case _:
                 return False
         return True
-
-
-class BranchSection(Section):
-    def __init__(self, parentName: str):
-        super().__init__(parentName + "_branch")
-
-    def __ini__(self) -> str:
-        contents = [f"if states"]
-        for content in self.get_lines():
-            if isinstance(content, DataWrapper):
-                key = content.get_key()
-                contents.append(f"{key} = {self.get_value(key)}")
-            elif isinstance(content, CommandWrapper):
-                key = content.get_key()
-                contents.append(f"run = {self.get_command(key)}")
-            elif isinstance(content, Content):
-                contents.append(content.__ini__())
-
-        return "\n".join(contents) + "\nendif"
-
-
-class SectionFactory:
-    @staticmethod
-    def getSections(line: str) -> list[SectionBase]:
-        sections: list[SectionBase] = []
-        if line[0] != "[":
-            return sections
-        section_names = line.split("[")[1:]
-        for name in section_names:
-            name = name.split("]")[0].strip()
-            section = SectionFactory.getSection(name)
-            sections.append(section)
-        return sections
-
-    @staticmethod
-    def getSection(name: str) -> SectionBase:
-        if name.startswith("Resource"):
-            return ResourceSection(name)
-        else:
-            return Section(name)

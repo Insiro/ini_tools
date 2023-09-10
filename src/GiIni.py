@@ -1,19 +1,13 @@
 from __future__ import annotations
+
 import os
+
 from contents.content import ContentFactory
-from contents.line import (
-    DataWrapper,
-    Content,
-    Comment,
-    CommandWrapper,
-)
-from contents.section import (
-    BranchSection,
-    ResourceSection,
-    SectionBase,
-    Section,
-    SectionFactory,
-)
+from contents.line import Comment, Content
+from contents.section.branch import BranchSection
+from contents.section.factory import SectionFactory
+from contents.section.section import ResourceSection, Section, SectionBase
+from contents.wrapper import CommandWrapper, DataWrapper
 
 
 class GiIni(Section):

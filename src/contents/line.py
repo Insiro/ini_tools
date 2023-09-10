@@ -6,26 +6,11 @@ class Content(metaclass=ABCMeta):
         raise NotImplementedError()
 
     def __ini__(self) -> str:
-        raise NotImplementedError()
+        return self.__str__()
 
     def __dict__(self):
         return self.__str__()
 
-
-class KeyWrapper(Content):
-    def __init__(self, key) -> None:
-        self.__key = key
-
-    def get_key(self):
-        return self.__key
-
-
-class CommandWrapper(KeyWrapper):
-    pass
-
-
-class DataWrapper(KeyWrapper):
-    pass
 
 
 class PlainText(Content):
